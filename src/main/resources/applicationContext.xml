@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing,
+   software distributed under the License is distributed on an
+   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+   KIND, either express or implied.  See the License for the
+   specific language governing permissions and limitations
+   under the License.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:sec="http://www.springframework.org/schema/security"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/util
+        http://www.springframework.org/schema/util/spring-util.xsd
+        http://www.springframework.org/schema/security
+        http://www.springframework.org/schema/security/spring-security.xsd">
+
+    <!-- Housekeeping -->
+    <bean id="baseURL" class="java.lang.String">
+        <constructor-arg value="${scheme}://${host}:${port}${rootPath}"/>
+    </bean>
+    <bean id="site" class="java.lang.String">
+        <constructor-arg value="${project.parent.url}"/>
+    </bean>
+    <bean id="license" class="java.lang.String">
+        <constructor-arg value="${licenseUrl}"/>
+    </bean>
+    <bean id="HOME" class="java.lang.String">
+        <constructor-arg value="HOME"/>
+    </bean>
+
+    <!-- These Fortress Manager beans are used as api for RBAC/IAM domain model -->
+    <bean id="reviewMgr" class="org.apache.directory.fortress.core.ReviewMgrFactory" scope="prototype"
+          factory-method="createInstance">
+        <constructor-arg value="HOME"/>
+    </bean>
+    <bean id="adminMgr" class="org.apache.directory.fortress.core.AdminMgrFactory" scope="prototype"
+          factory-method="createInstance">
+        <constructor-arg value="HOME"/>
+    </bean>
+    <bean id="accessMgr" class="org.apache.directory.fortress.core.AccessMgrFactory" scope="prototype"
+          factory-method="createInstance">
+        <constructor-arg value="HOME"/>
+    </bean>
+    <bean id="delReviewMgr" class="org.apache.directory.fortress.core.DelReviewMgrFactory" scope="prototype"
+          factory-method="createInstance">
+        <constructor-arg value="HOME"/>
+    </bean>
+    <bean id="delAdminMgr" class="org.apache.directory.fortress.core.DelAdminMgrFactory" scope="prototype"
+          factory-method="createInstance">
+        <constructor-arg value="HOME"/>
+    </bean>
+    <bean id="delAccessMgr" class="org.apache.directory.fortress.core.DelAccessMgrFactory" scope="prototype"
+          factory-method="createInstance">
+        <constructor-arg value="HOME"/>
+    </bean>
+    <bean id="auditMgr" class="org.apache.directory.fortress.core.AuditMgrFactory" scope="prototype"
+          factory-method="createInstance">
+        <constructor-arg value="HOME"/>
+    </bean>
+    <bean id="pwPolicyMgr" class="org.apache.directory.fortress.core.PwPolicyMgrFactory" scope="prototype"
+          factory-method="createInstance">
+        <constructor-arg value="HOME"/>
+    </bean>
+    <bean id="groupMgr" class="org.apache.directory.fortress.core.GroupMgrFactory" scope="prototype"
+          factory-method="createInstance">
+        <constructor-arg value="HOME"/>
+    </bean>
+    <!-- The Fortress Realm J2EE Manager bean used for deserializing the principal as returned from tomcat -->
+    <bean id="j2eePolicyMgr" class="org.apache.directory.fortress.realm.J2eePolicyMgrFactory" scope="prototype"
+          factory-method="createInstance">
+    </bean>
+
+    <bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+        <property name="targetObject">
+            <bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+                <property name="targetClass" value="java.lang.System"/>
+                <property name="targetMethod" value="getProperties"/>
+            </bean>
+        </property>
+        <property name="targetMethod" value="putAll"/>
+        <property name="arguments">
+            <util:properties>
+                <prop key="version">1.0.1</prop>
+            </util:properties>
+        </property>
+    </bean>
+
+    <!-- Inject spring context into wicket pages -->
+    <bean id="wicketApplication" class="org.apache.directory.fortress.web.ApplicationContext"></bean>
+
+    <!-- setup spring security using pre-authenticated (Java EE) strategy -->
+    <bean id="filterChainProxy" class="org.springframework.security.web.FilterChainProxy">
+        <constructor-arg>
+            <list>
+                <sec:filter-chain pattern="/**" filters="sif,j2eePreAuthFilter,logoutFilter,etf,fsi" />
+            </list>
+        </constructor-arg>
+    </bean>
+
+    <bean id="sif" class="org.springframework.security.web.context.SecurityContextPersistenceFilter"/>
+    <sec:authentication-manager alias="authenticationManager">
+        <sec:authentication-provider ref='preAuthenticatedAuthenticationProvider'/>
+    </sec:authentication-manager>
+    <bean id="preAuthenticatedAuthenticationProvider" class="org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider">
+        <property name="preAuthenticatedUserDetailsService" ref="preAuthenticatedUserDetailsService"/>
+    </bean>
+    <bean id="preAuthenticatedUserDetailsService" class="org.springframework.security.web.authentication.preauth.PreAuthenticatedGrantedAuthoritiesUserDetailsService"/>
+    <bean id="j2eePreAuthFilter" class="org.springframework.security.web.authentication.preauth.j2ee.J2eePreAuthenticatedProcessingFilter">
+        <property name="authenticationManager" ref="authenticationManager"/>
+        <property name="authenticationDetailsSource">
+            <bean class="org.springframework.security.web.authentication.preauth.j2ee.J2eeBasedPreAuthenticatedWebAuthenticationDetailsSource">
+                <property name="mappableRolesRetriever">
+                    <bean class="org.springframework.security.web.authentication.preauth.j2ee.WebXmlMappableAttributesRetriever"/>
+                </property>
+                <property name="userRoles2GrantedAuthoritiesMapper">
+                    <bean class="org.springframework.security.core.authority.mapping.SimpleAttributes2GrantedAuthoritiesMapper">
+                        <property name="convertAttributeToUpperCase" value="true"/>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+    </bean>
+    <bean id="preAuthenticatedProcessingFilterEntryPoint" class="org.springframework.security.web.authentication.Http403ForbiddenEntryPoint"/>
+    <bean id="logoutFilter" class="org.springframework.security.web.authentication.logout.LogoutFilter">
+        <constructor-arg value="/"/>
+        <constructor-arg>
+            <list>
+                <bean class="org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler"/>
+            </list>
+        </constructor-arg>
+    </bean>
+
+    <!--     <bean id="servletContext" class="org.springframework.web.context.support.ServletContextFactoryBean"/> -->
+
+    <bean id="etf" class="org.springframework.security.web.access.ExceptionTranslationFilter">
+        <constructor-arg  ref="preAuthenticatedProcessingFilterEntryPoint"/>
+    </bean>
+
+    <bean id="httpRequestAccessDecisionManager" class="org.springframework.security.access.vote.AffirmativeBased">
+        <constructor-arg>
+            <list>
+                <ref bean="roleVoter"/>
+            </list>
+        </constructor-arg>
+    </bean>
+
+    <bean id="fsi" class="org.springframework.security.web.access.intercept.FilterSecurityInterceptor">
+        <property name="authenticationManager" ref="authenticationManager"/>
+        <property name="accessDecisionManager" ref="httpRequestAccessDecisionManager"/>
+        <property name="securityMetadataSource">
+            <sec:filter-security-metadata-source use-expressions="false">
+                <!-- before spring interceptor recognizes these roles, the j2ee preauthentication filter requires prior declaration in web.xml -->
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.userpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_USERS"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.rolepage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_ROLES"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.permpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_PERMS"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.sdstaticpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_SSDS"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.sddynamicpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_DSDS"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.pwpolicypage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_POLICIES"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.objectpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_PERMOBJS"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.ouuserpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_USEROUS"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.oupermpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_PERMOUS"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.roleadminpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_ADMINROLES"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.objectadminpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_ADMINOBJS"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.permadminpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_ADMINPERMS"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.auditauthzpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_AUDIT_AUTHZS"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.auditmodpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_AUDIT_MODS"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.auditbindpage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_AUDIT_BINDS"/>
+                <sec:intercept-url pattern="/wicket/bookmarkable/org.apache.directory.fortress.web.grouppage"
+                                   access="ROLE_RBAC_ADMIN,ROLE_GROUPS"/>
+            </sec:filter-security-metadata-source>
+        </property>
+    </bean>
+    <bean id="roleVoter" class="org.springframework.security.access.vote.RoleVoter"/>
+    <bean id="securityContextHolderAwareRequestFilter" class="org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter"/>
+</beans>

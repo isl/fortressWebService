@@ -1,0 +1,60 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing,
+   software distributed under the License is distributed on an
+   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+   KIND, either express or implied.  See the License for the
+   specific language governing permissions and limitations
+   under the License.
+-->
+<html>
+<head></head>
+<body>
+<script type="text/javascript">
+    (function(window){"use strict";window.timing=window.timing||{getTimes:function(opts){var
+    performance=window.performance||window.webkitPerformance||window.msPerformance||window.mozPerformance;if(performance===undefined){return
+    false}var timing=performance.timing;var api={};opts=opts||{};if(timing){if(opts&&!opts.simple){for(var k in
+    timing){if(timing.hasOwnProperty(k)){api[k]=timing[k]}}}if(api.firstPaint===undefined){var
+    firstPaint=0;if(window.chrome&&
+    window.chrome.loadTimes){firstPaint=window.chrome.loadTimes().firstPaintTime*1e3;api.firstPaintTime=firstPaint-window.chrome.loadTimes().startLoadTime*1e3}else
+    if(typeof
+    window.performance.timing.msFirstPaint==="number"){firstPaint=window.performance.timing.msFirstPaint;api.firstPaintTime=firstPaint-window.performance.timing.navigationStart}if(opts
+    &&
+    !opts.simple){api.firstPaint=firstPaint}}api.loadTime=timing.loadEventEnd-timing.fetchStart;api.domReadyTime=timing.domComplete-timing.domInteractive;api.readyStart=timing.fetchStart-timing.navigationStart;api.redirectTime=timing.redirectEnd-timing.redirectStart;api.appcacheTime=timing.domainLookupStart-timing.fetchStart;api.unloadEventTime=timing.unloadEventEnd-timing.unloadEventStart;api.lookupDomainTime=timing.domainLookupEnd-timing.domainLookupStart;api.connectTime=timing.connectEnd-timing.connectStart;api.requestTime=timing.responseEnd-timing.requestStart;api.initDomTreeTime=timing.domInteractive-timing.responseEnd;api.loadEventTime=timing.loadEventEnd-timing.loadEventStart}return
+    api},printTable:function(opts){var table={};var
+    data=this.getTimes(opts)||{};Object.keys(data).sort().forEach(function(k){table[k]={ms:data[k],s:+(data[k]/1e3).toFixed(2)}});console.table(table)},printSimpleTable:function(){this.printTable({simple:true})}}})(this);
+</script>
+<wicket:extend>
+    <h3><span wicket:id="pageHeader"></span></h3>
+
+    <div wicket:id="layout">
+        <div id="vertical">
+            <div id="horizontal">
+                <div>
+                    <p>
+                    <div wicket:id="navpanel"></div>
+                </div>
+                <div>
+                    <p>
+                    <div wicket:id="sdlistpanel"></div>
+                </div>
+                <div>
+                    <p>
+                    <div wicket:id="sddetailpanel"></div>
+                </div>
+            </div>
+            <div wicket:id="infopanel"></div>
+        </div>
+    </div>
+</wicket:extend>
+</body>
+</html>
